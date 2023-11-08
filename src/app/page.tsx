@@ -1,95 +1,86 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+
+import {ChangeEvent, FormEvent, useState} from "react";
 
 export default function Home() {
+  const [input, setInput] = useState("");
+  const [message, setMessage] = useState<{name: string; body: string}[]>([]);
+
+  // 발급받은 OpenAI API 키를 변수로 저장
+  const apiKey = "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";
+  // OpenAI API 엔드포인트 주소를 변수로 저장
+  const apiEndpoint = "OpenAI에서 발급받은 API키";
+
+  // ChatGPT API 요청
+  async function fetchAIResponse(prompt: string) {
+    // API 요청에 사용할 옵션을 정의
+    const requestOptions = {
+      method: "POST",
+      // API 요청의 헤더를 설정
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo", // 사용할 AI 모델
+        messages: [
+          {
+            role: "user", // 메시지 역할을 user로 설정
+            content: prompt, // 사용자가 입력한 메시지
+          },
+        ],
+        temperature: 0.8, // 모델의 출력 다양성
+        max_tokens: 1024, // 응답받을 메시지 최대 토큰(단어) 수 설정
+        top_p: 1, // 토큰 샘플링 확률을 설정
+        frequency_penalty: 0.5, // 일반적으로 나오지 않는 단어를 억제하는 정도
+        presence_penalty: 0.5, // 동일한 단어나 구문이 반복되는 것을 억제하는 정도
+        stop: ["Human"], // 생성된 텍스트에서 종료 구문을 설정
+      }),
+    };
+    // API 요청후 응답 처리
+    try {
+      const response = await fetch(apiEndpoint, requestOptions);
+      const data = await response.json();
+      if (data.error) {
+        console.log("data : ", data);
+      }
+      const aiResponse = data.choices[0].message.content;
+      return aiResponse;
+    } catch (error) {
+      console.error("OpenAI API 호출 중 오류 발생:", error);
+      return "OpenAI API 호출 중 오류 발생";
+    }
+  }
+  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setInput(e.currentTarget.value);
+  };
+  // 전송 버튼 클릭 이벤트 처리
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const aiResponse = await fetchAIResponse(input);
+    setMessage((prev) => [{name: "나", body: input}, ...prev]);
+    setMessage((prev) => [{name: "챗봇", body: aiResponse}, ...prev]);
+    setInput("");
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div id="chat-container">
+      <div id="message-wrap">
+        {message.map((item: any, index: number) => (
+          <div id="chat-messages" key={index}>
+            {item.name}:{item.body}
+          </div>
+        ))}
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+      <form onSubmit={onSubmit} id="user-input">
+        <input
+          onChange={onChange}
+          value={input}
+          type="text"
+          placeholder="메시지를 입력하세요..."
         />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+        <button>전송</button>
+      </form>
+    </div>
+  );
 }
